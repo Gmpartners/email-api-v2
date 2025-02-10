@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const Email = require('../models/email');
+const cheerio = require('cheerio');
 
 class EmailService {
     constructor() {
@@ -12,18 +12,48 @@ class EmailService {
                 pass: process.env.SMTP_PASS
             }
         });
+
+        this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    }
+
+    // Adiciona pixel de rastreamento e transforma links
+    prepareHtmlContent(html, emailId, leadId) {
+        const $ = cheerio.load(html);
+
+        // Adicionar pixel de rastreamento
+        const trackingPixel = `<img src="${this.baseUrl}/track/open/${emailId}/${leadId}.png" width="1" height="1" />`;
+        $('body').append(trackingPixel);
+
+        // Transformar todos os links
+        $('a').each((i, elem) => {
+            const originalUrl = $(elem).attr('href');
+            if (originalUrl && originalUrl.startsWith('http')) {
+                const trackingUrl = `${this.baseUrl}/track/click/${emailId}/${leadId}?url=${encodeURIComponent(originalUrl)}`;
+                $(elem).attr('href', trackingUrl);
+            }
+        });
+
+        return $.html();
     }
 
     async sendEmail(lead, emailContent) {
         try {
+            // Preparar HTML com tracking
+            const preparedHtml = this.prepareHtmlContent(
+                emailContent.htmlContent,
+                emailContent.emailId,
+                lead._id
+            );
+
             const mailOptions = {
                 from: `"${emailContent.fromName}" <${emailContent.fromEmail}>`,
                 to: lead.email,
                 subject: emailContent.subject,
-                html: emailContent.htmlContent,
+                html: preparedHtml,
                 headers: {
                     'X-Campaign-ID': emailContent.campaignId,
-                    'X-Email-ID': emailContent.emailId
+                    'X-Email-ID': emailContent.emailId,
+                    'X-Lead-ID': lead._id
                 }
             };
 
