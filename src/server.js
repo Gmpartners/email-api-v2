@@ -11,6 +11,7 @@ const queueService = require('./services/queueService');
 const campaignRoutes = require('./routes/campaignRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const leadRoutes = require('./routes/leadRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
 
 const app = express();
 
@@ -48,6 +49,7 @@ connectDB();
 app.use('/api', campaignRoutes);
 app.use('/api', emailRoutes);
 app.use('/api', leadRoutes);
+app.use('/track', trackingRoutes);
 
 // Rota de saúde da API
 app.get('/health', (req, res) => {
